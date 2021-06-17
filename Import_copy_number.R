@@ -1,5 +1,5 @@
 require(data.table)
-path_prefix="/data/mdata/Shiny_NCI_demo/"
+
 #amplifications and deletions (ALL)
 CNA_all <- fread(paste0(path_prefix,"Del_amp_conumee_bins_neuro_baselinecorrection_preprocessRaw_XYincl_sub30_GMAF1p_minwidth3.txt"),
                  stringsAsFactors = FALSE, check.names = FALSE, na.strings = "")

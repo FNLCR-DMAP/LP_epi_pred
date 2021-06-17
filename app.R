@@ -1,6 +1,6 @@
 
 options(repos = BiocManager::repositories())
-
+library(bit64)
 library(shiny)
 library(shinyFiles)
 library(shinydashboard)
@@ -16,7 +16,8 @@ library(crosstalk)
 library(data.table)
 library(highcharter)
 library(shinycustomloader)
-path_prefix="/data/mdata/Shiny_NCI_demo/"
+#path_prefix="/data/mdata/Shiny_NCI_demo/"
+#path_prefix="./"
  #RSconnect needs not source
   source("./plot_copy_number.R")
   source("./plot_supervised_SD.R")
@@ -50,10 +51,9 @@ anno_base$PFS_status <- as.numeric(as.character(anno_base$PFS_status))
 
 
 anno_neuro <- fread(paste0(path_prefix,"anno_neuro.txt"), stringsAsFactors = FALSE, check.names = FALSE)
-#temporarily disable:
-#anno_sarcoma <- fread(paste0(path_prefix,"anno_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE)
-#anno_neuro_sarcoma <- fread(paste0(path_prefix,"anno_neuro_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE)
-#anno_hemepath <- fread(paste0(path_prefix,"anno_hemepath.txt"), stringsAsFactors = FALSE, check.names = FALSE)
+anno_sarcoma <- fread(paste0(path_prefix,"anno_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE)
+anno_neuro_sarcoma <- fread(paste0(path_prefix,"anno_neuro_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE)
+anno_hemepath <- fread(paste0(path_prefix,"anno_hemepath.txt"), stringsAsFactors = FALSE, check.names = FALSE)
 
 #ui------------------------
 ui <- dashboardPage(
@@ -140,7 +140,7 @@ ui <- dashboardPage(
                                                                                                               "Genitourinary",
                                                                                                               "Pan-Cancer"), selected = "Central Nervous System"),
                                                       tags$head(tags$style(HTML(".select-input {height: 20px;}"))),
-                                                      #tags$head(tags$style(".shiny-notification {position: fixed; top: 60% ;left: 0%;}"))
+                                                      #tags$head(tags$style(".shiny-nFALSE,# TRUE,otification {position: fixed; top: 60% ;left: 0%;}"))
                                                   align = "left"),
                                                   div(style="display: inline-block; font-size: 15px;",
                                                       selectInput("x", "Select embedding", 
@@ -555,7 +555,7 @@ server <- shinyServer(function(input, output, session) {
     add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
                     y = subset(p$data, !is.na(NIH_labels))[[y]],
                     text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                    showarrow = TRUE,
+                    showarrow = FALSE,# TRUE,
                     arrowcolor='red',
                     arrowhead = 6,
                     arrowsize = 1,
@@ -617,7 +617,7 @@ output$plot_SARC <- renderPlotly({
                         add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
                                         y = subset(p$data, !is.na(NIH_labels))[[y]],
                                         text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                                        showarrow = TRUE,
+                                        showarrow = FALSE,# TRUE,
                                         arrowcolor='red',
                                         arrowhead = 6,
                                         arrowsize = 1,
@@ -679,7 +679,7 @@ output$plot_CNS_SARC <- renderPlotly({
                           add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
                                           y = subset(p$data, !is.na(NIH_labels))[[y]],
                                           text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                                          showarrow = TRUE,
+                                          showarrow = FALSE,# TRUE,
                                           arrowcolor='red',
                                           arrowhead = 6,
                                           arrowsize = 1,
@@ -769,18 +769,18 @@ output$plot_HEME <- renderPlotly({
                       #guides(color = guide_legend(override.aes = list(shape = c(15))))
                       #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
                       ggplotly(p) %>%
-                        # add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-                        #                 y = subset(p$data, !is.na(NIH_labels))[[y]],
-                        #                 text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                        #                 showarrow = TRUE,
-                        #                 arrowcolor='red',
-                        #                 arrowhead = 6,
-                        #                 arrowsize = 1,
-                        #                 xref = "x",
-                        #                 yref = "y",
-                        #                 font = list(color = 'black',
-                        #                             family = 'arial',
-                        #                             size = 14)) %>%
+                        add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
+                                        y = subset(p$data, !is.na(NIH_labels))[[y]],
+                                        text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
+                                        showarrow = TRUE,
+                                        arrowcolor='red',
+                                        arrowhead = 6,
+                                        arrowsize = 1,
+                                        xref = "x",
+                                        yref = "y",
+                                        font = list(color = 'black',
+                                                    family = 'arial',
+                                                    size = 14)) %>%
                         config(scrollZoom = TRUE) %>%
                         layout(title = paste0("Hematopoietic (n=",nrow(p$data),")"),
                                height=800, dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
@@ -871,18 +871,18 @@ output$plot_HEME <- renderPlotly({
       req(d)
       case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
       CNA_plot(case)
-      # add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-      #                 y = subset(p$data, !is.na(NIH_labels))[[y]],
-      #                 text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-      #                 showarrow = TRUE,
-      #                 arrowcolor='red',
-      #                 arrowhead = 6,
-      #                 arrowsize = 1,
-      #                 xref = "x",
-      #                 yref = "y",
-      #                 font = list(color = 'black',
-      #                             family = 'arial',
-      #                             size = 14))
+      add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
+                      y = subset(p$data, !is.na(NIH_labels))[[y]],
+                      text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
+                      showarrow = TRUE,
+                      arrowcolor='red',
+                      arrowhead = 6,
+                      arrowsize = 1,
+                      xref = "x",
+                      yref = "y",
+                      font = list(color = 'black',
+                                  family = 'arial',
+                                  size = 14))
     })
 
     
