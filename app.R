@@ -37,7 +37,7 @@ options(max.print=1000000)
 mycols <- readRDS(paste0(path_prefix,"mycols.rds"))
 
 #anno_base <- openxlsx::read.xlsx("./Sample_sheet_master.xlsm")
-anno_base <-as.data.frame(read_xlsx(paste0(path_prefix,"./Sample_sheet_master.xlsm"), guess_max = 1048576))
+anno_base <-as.data.frame(read_xlsx(paste0(path_prefix,"./Sample_sheet_master.xlsm"), guess_max = 40000))
 
 
 
@@ -51,9 +51,21 @@ anno_base$PFS_status <- as.numeric(as.character(anno_base$PFS_status))
 
 
 anno_neuro <- fread(paste0(path_prefix,"anno_neuro.txt"), stringsAsFactors = FALSE, check.names = FALSE)
+colxys <-colnames(anno_neuro)[grepl("_x|_y",colnames(anno_neuro))]
+scols<- c("order","Sample","Combined_class_match_dkfz","Combined_class_match_nci","NIH_labels",colxys)
+anno_neuro<-as.data.table(as.data.frame(anno_neuro)[,scols])
+print(colnames(anno_neuro))
+gc()
 anno_sarcoma <- fread(paste0(path_prefix,"anno_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE)
+anno_sarcoma<-as.data.table(as.data.frame(anno_sarcoma)[,scols])
+gc()
 anno_neuro_sarcoma <- fread(paste0(path_prefix,"anno_neuro_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE)
+anno_neuro_sarcoma<-as.data.table(as.data.frame(anno_neuro_sarcoma)[,scols])
+gc()
 anno_hemepath <- fread(paste0(path_prefix,"anno_hemepath.txt"), stringsAsFactors = FALSE, check.names = FALSE)
+anno_hemepath<-as.data.table(as.data.frame(anno_hemepath)[,scols])
+gc()
+
 
 #ui------------------------
 ui <- dashboardPage(
@@ -517,200 +529,207 @@ server <- shinyServer(function(input, output, session) {
     b = 100,
     t = 50)
   
-  #CNS
-  output$plot_CNS <- renderPlotly({
-    # use the key aesthetic/argument to help uniquely identify selected observations
-    key <- rownames(anno_neuro)
-    #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
-    x <- paste0(input$x,"_x")
-    y <- paste0(input$x,"_y")
-    cnames <- aggregate(cbind(umap_x, umap_y) ~ Combined_class_match_dkfz, data=anno_neuro,
-                        FUN=function(x)mean((x)))
-    p <- ggplot(data=anno_neuro, aes(x=anno_neuro[[x]],y=anno_neuro[[y]],key=key)) +
-                geom_point(aes(color=Combined_class_match_dkfz),  size=3, alpha=1) +
-                geom_text(data=cnames, aes(x=umap_x, y=umap_y, label = Combined_class_match_dkfz), position = position_dodge(width=0.5),  size=2.5, inherit.aes = FALSE) +
-                theme_classic() +
-                theme(axis.text.y = element_text(size=9, color="black"),
-                      axis.text.x = element_text(size=9, color="black"),
-                      axis.ticks.y = element_line(color="black", size = 0.5),
-                      axis.ticks.x = element_line(color="black", size = 0.5),
-                      axis.ticks.length = unit(2,"mm"),
-                      panel.border = element_rect(colour = "black", fill=NA, size=1),
-                      panel.grid.major = element_line(colour="grey", size=0.5),
-                      axis.line = element_blank(),
-                      legend.text=element_text(size=10),
-                      legend.title=element_text(size=11),
-                      legend.key.size = unit(0.5, 'lines'),
-                      axis.title.x = element_text(size=14, color="black"),
-                      axis.title.y = element_text(size=14, color="black")) +
-                labs(x = paste0(input$x,"_1"), y = paste0(input$x,"_2")) +
-                theme(legend.position="none") +
-                scale_color_manual("Methylation class", values = mycols, guide = guide_legend(override.aes = list(shape = 15))) +
-                scale_x_continuous(breaks = seq(-100, 100, by=5)) +
-                scale_y_continuous(breaks = seq(-100, 100, by=5)) +
-                coord_fixed(ratio = 1, xlim = ranges2$x, ylim = ranges2$y, expand = TRUE, clip = "on")
-                #guides(color = guide_legend(override.aes = list(shape = c(15))))
-                #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
-    ggplotly(p) %>% 
-    add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-                    y = subset(p$data, !is.na(NIH_labels))[[y]],
-                    text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                    showarrow = FALSE,# TRUE,
-                    arrowcolor='red',
-                    arrowhead = 6,
-                    arrowsize = 1,
-                    xref = "x",
-                    yref = "y",
-                    font = list(color = 'black',
-                                family = 'arial',
-                                size = 14)) %>%
-    config(scrollZoom = TRUE) %>%
-      layout(title = paste0("Central Nervous System (n=",nrow(p$data),")"),
-             height=1000, dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
-             margin = m,
-             showlegend = T,
-             legend = list(orientation = "v",
-                           yanchor = "center",
-                           itemclick = "toggleothers",
-                           tracegroupgap = 2,
-                           itemwidth = 75,
-                           itemsizing = "constant")) %>% 
-      toWebGL()
+  
+  myRender<-function(anno_generic,annot_title){
+    return (renderPlotly({
+      # use the key aesthetic/argument to help uniquely identify selected observations
+      key <- rownames(anno_generic)
+      #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
+      x <- paste0(input$x,"_x")
+      y <- paste0(input$x,"_y")
+      
+     # cnames <- aggregate(cbind(umap_x, umap_y) ~ Combined_class_match_dkfz, data=anno_neuro,
+      #                    FUN=function(x)mean((x)))
+      p <- ggplot(data=anno_generic, aes(x=anno_generic[[x]],y=anno_generic[[y]],key=key)) +
+        geom_point(aes(color=Combined_class_match_dkfz),  size=3, alpha=1) +
+      #  geom_text(data=cnames, aes(x=umap_x, y=umap_y, label = Combined_class_match_dkfz), position = position_dodge(width=0.5),  size=2.5, inherit.aes = FALSE) +
+        theme_classic() +
+        theme(axis.text.y = element_text(size=9, color="black"),
+              axis.text.x = element_text(size=9, color="black"),
+              axis.ticks.y = element_line(color="black", size = 0.5),
+              axis.ticks.x = element_line(color="black", size = 0.5),
+              axis.ticks.length = unit(2,"mm"),
+              panel.border = element_rect(colour = "black", fill=NA, size=1),
+              panel.grid.major = element_line(colour="grey", size=0.5),
+              axis.line = element_blank(),
+              legend.text=element_text(size=10),
+              legend.title=element_text(size=11),
+              legend.key.size = unit(0.5, 'lines'),
+              axis.title.x = element_text(size=14, color="black"),
+              axis.title.y = element_text(size=14, color="black")) +
+        labs(x = paste0(input$x,"_1"), y = paste0(input$x,"_2")) +
+        theme(legend.position="none") +
+        scale_color_manual("Methylation class", values = mycols, guide = guide_legend(override.aes = list(shape = 15))) +
+        scale_x_continuous(breaks = seq(-100, 100, by=5)) +
+        scale_y_continuous(breaks = seq(-100, 100, by=5)) +
+        coord_fixed(ratio = 1, xlim = ranges2$x, ylim = ranges2$y, expand = TRUE, clip = "on")
+      #guides(color = guide_legend(override.aes = list(shape = c(15))))
+      #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
+      ggplotly(p) %>% 
+        # add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
+        #                 y = subset(p$data, !is.na(NIH_labels))[[y]],
+        #                 text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
+        #                 showarrow = FALSE,# TRUE,
+        #                 arrowcolor='red',
+        #                 arrowhead = 6,
+        #                 arrowsize = 1,
+        #                 xref = "x",
+        #                 yref = "y",
+        #                 font = list(color = 'black',
+        #                             family = 'arial',
+      #                            size = 14)) %>%
+      config(scrollZoom = TRUE) %>%
+        layout(title = paste0(anno_title, " (n=",nrow(p$data),")"),
+               height=1000, dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
+               margin = m,
+               showlegend = T,
+               legend = list(orientation = "v",
+                             yanchor = "center",
+                             itemclick = "toggleothers",
+                             tracegroupgap = 2,
+                             itemwidth = 75,
+                             itemsizing = "constant")) %>% 
+        toWebGL()
+      
+    }))
     
-  })
-
+  }
+  #CNS
+  output$plot_CNS <- 
 #SARCOMA
-output$plot_SARC <- renderPlotly({
-                      # use the key aesthetic/argument to help uniquely identify selected observations
-                      key <- rownames(anno_sarcoma)
-                      #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
-                      x <- paste0(input$x,"_x")
-                      y <- paste0(input$x,"_y")
-                      cnames <- aggregate(cbind(umap_x, umap_y) ~ Combined_class_match_dkfz, data=anno_sarcoma,
-                                          FUN=function(x)mean((x)))
-                      p <- ggplot(data=anno_sarcoma, aes(x=anno_sarcoma[[x]],y=anno_sarcoma[[y]],key=key)) +
-                        geom_point(aes(color=Combined_class_match_dkfz),  size=2, alpha=1) +
-                        geom_text(data=cnames, aes(x=umap_x, y=umap_y, label = Combined_class_match_dkfz), position = position_dodge(width=0.5),  size=2.5, inherit.aes = FALSE) +
-                        theme_classic() +
-                        theme(axis.text.y = element_text(size=9, color="black"),
-                              axis.text.x = element_text(size=9, color="black"),
-                              axis.ticks.y = element_line(color="black", size = 0.5),
-                              axis.ticks.x = element_line(color="black", size = 0.5),
-                              axis.ticks.length = unit(2,"mm"),
-                              panel.border = element_rect(colour = "black", fill=NA, size=1),
-                              panel.grid.major = element_line(colour="grey", size=0.5),
-                              axis.line = element_blank(),
-                              legend.text=element_text(size=10),
-                              legend.title=element_text(size=11),
-                              legend.key.size = unit(0.5, 'lines'),
-                              axis.title.x = element_text(size=14, color="black"),
-                              axis.title.y = element_text(size=14, color="black")) +
-                        labs(x = paste0(input$x,"_1"), y = paste0(input$x,"_2")) +
-                        #theme(legend.position="right") +
-                        scale_color_manual("Methylation class", values = mycols, guide = guide_legend(override.aes = list(shape = 15))) +
-                        scale_x_continuous(breaks = seq(-100, 100, by=5)) +
-                        scale_y_continuous(breaks = seq(-100, 100, by=5)) +
-                        coord_fixed(ratio = 1, xlim = ranges2$x, ylim = ranges2$y, expand = TRUE, clip = "on")
-                      #guides(color = guide_legend(override.aes = list(shape = c(15))))
-                      #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
-                      ggplotly(p) %>%
-                        add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-                                        y = subset(p$data, !is.na(NIH_labels))[[y]],
-                                        text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                                        showarrow = FALSE,# TRUE,
-                                        arrowcolor='red',
-                                        arrowhead = 6,
-                                        arrowsize = 1,
-                                        xref = "x",
-                                        yref = "y",
-                                        font = list(color = 'black',
-                                                    family = 'arial',
-                                                    size = 14)) %>%
-                        config(scrollZoom = TRUE) %>%
-                        layout(title = paste0("Bone and Soft Tissue (n=",nrow(p$data),")"),
-                               height=1000, dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
-                               margin = list(t = 50),
-                               showlegend = T,
-                               legend = list(orientation = "v",
-                                             yanchor = "top",
-                                             itemclick = "toggleothers",
-                                             tracegroupgap = 2,
-                                             itemwidth = 75,
-                                             itemsizing = "constant")) %>%
-                        toWebGL()
-
-  })
-
-#CNS/SARCOMA
-output$plot_CNS_SARC <- renderPlotly({
-                        # use the key aesthetic/argument to help uniquely identify selected observations
-                        key <- rownames(anno_neuro_sarcoma)
-                        #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
-                        x <- paste0(input$x,"_x")
-                        y <- paste0(input$x,"_y")
-                        cnames <- aggregate(cbind(umap_x, umap_y) ~ Combined_class_match_dkfz, data=anno_neuro_sarcoma,
-                                            FUN=function(x)mean((x)))
-                        p <- ggplot(data=anno_neuro_sarcoma, aes(x=anno_neuro_sarcoma[[x]],y=anno_neuro_sarcoma[[y]],key=key)) +
-                          geom_point(aes(color=Combined_class_match_dkfz),  size=2, alpha=1) +
-                          geom_text(data=cnames, aes(x=umap_x, y=umap_y, label = Combined_class_match_dkfz), position = position_dodge(width=0.5),  size=2.5, inherit.aes = FALSE) +
-                          theme_classic() +
-                          theme(axis.text.y = element_text(size=9, color="black"),
-                                axis.text.x = element_text(size=9, color="black"),
-                                axis.ticks.y = element_line(color="black", size = 0.5),
-                                axis.ticks.x = element_line(color="black", size = 0.5),
-                                axis.ticks.length = unit(2,"mm"),
-                                panel.border = element_rect(colour = "black", fill=NA, size=1),
-                                panel.grid.major = element_line(colour="grey", size=0.5),
-                                axis.line = element_blank(),
-                                legend.text=element_text(size=10),
-                                legend.title=element_text(size=11),
-                                legend.key.size = unit(0.5, 'lines'),
-                                axis.title.x = element_text(size=14, color="black"),
-                                axis.title.y = element_text(size=14, color="black")) +
-                          labs(x = paste0(input$x,"_1"), y = paste0(input$x,"_2")) +
-                          #theme(legend.position="right") +
-                          scale_color_manual("Methylation class", values = mycols, guide = guide_legend(override.aes = list(shape = 15))) +
-                          scale_x_continuous(breaks = seq(-100, 100, by=5)) +
-                          scale_y_continuous(breaks = seq(-100, 100, by=5)) +
-                          coord_fixed(ratio = 1, xlim = ranges2$x, ylim = ranges2$y, expand = TRUE, clip = "on")
-                        #guides(color = guide_legend(override.aes = list(shape = c(15))))
-                        #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
-                        ggplotly(p) %>%
-                          add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-                                          y = subset(p$data, !is.na(NIH_labels))[[y]],
-                                          text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                                          showarrow = FALSE,# TRUE,
-                                          arrowcolor='red',
-                                          arrowhead = 6,
-                                          arrowsize = 1,
-                                          xref = "x",
-                                          yref = "y",
-                                          font = list(color = 'black',
-                                                      family = 'arial',
-                                                      size = 14)) %>%
-                          config(scrollZoom = TRUE) %>%
-                          layout(title = paste0("Combined CNS and Sarcoma (n=",nrow(p$data),")"),
-                                 height=1000, dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
-                                 margin = m,
-                                 showlegend = T,
-                                 legend = list(orientation = "v",
-                                               yanchor = "top",
-                                               itemclick = "toggleothers",
-                                               tracegroupgap = 2,
-                                               itemwidth = 75,
-                                               itemsizing = "constant")) %>%
-                          toWebGL()
-                        
-                      })
-
-datInput_dimred <- eventReactive(input$render_dimenred, {
-  # datInput only validated once the go button is clicked
-  key <- rownames(anno_base)
-  d <- event_data("plotly_selected")
-  req(d)
-  samples_supervised <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
-  samples_supervised
-})
+# output$plot_SARC <- renderPlotly({
+#                       # use the key aesthetic/argument to help uniquely identify selected observations
+#                       key <- rownames(anno_sarcoma)
+#                       #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
+#                       x <- paste0(input$x,"_x")
+#                       y <- paste0(input$x,"_y")
+#                       cnames <- aggregate(cbind(umap_x, umap_y) ~ Combined_class_match_dkfz, data=anno_sarcoma,
+#                                           FUN=function(x)mean((x)))
+#                       p <- ggplot(data=anno_sarcoma, aes(x=anno_sarcoma[[x]],y=anno_sarcoma[[y]],key=key)) +
+#                         geom_point(aes(color=Combined_class_match_dkfz),  size=2, alpha=1) +
+#                         geom_text(data=cnames, aes(x=umap_x, y=umap_y, label = Combined_class_match_dkfz), position = position_dodge(width=0.5),  size=2.5, inherit.aes = FALSE) +
+#                         theme_classic() +
+#                         theme(axis.text.y = element_text(size=9, color="black"),
+#                               axis.text.x = element_text(size=9, color="black"),
+#                               axis.ticks.y = element_line(color="black", size = 0.5),
+#                               axis.ticks.x = element_line(color="black", size = 0.5),
+#                               axis.ticks.length = unit(2,"mm"),
+#                               panel.border = element_rect(colour = "black", fill=NA, size=1),
+#                               panel.grid.major = element_line(colour="grey", size=0.5),
+#                               axis.line = element_blank(),
+#                               legend.text=element_text(size=10),
+#                               legend.title=element_text(size=11),
+#                               legend.key.size = unit(0.5, 'lines'),
+#                               axis.title.x = element_text(size=14, color="black"),
+#                               axis.title.y = element_text(size=14, color="black")) +
+#                         labs(x = paste0(input$x,"_1"), y = paste0(input$x,"_2")) +
+#                         #theme(legend.position="right") +
+#                         scale_color_manual("Methylation class", values = mycols, guide = guide_legend(override.aes = list(shape = 15))) +
+#                         scale_x_continuous(breaks = seq(-100, 100, by=5)) +
+#                         scale_y_continuous(breaks = seq(-100, 100, by=5)) +
+#                         coord_fixed(ratio = 1, xlim = ranges2$x, ylim = ranges2$y, expand = TRUE, clip = "on")
+#                       #guides(color = guide_legend(override.aes = list(shape = c(15))))
+#                       #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
+#                       ggplotly(p) %>%
+#                         add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
+#                                         y = subset(p$data, !is.na(NIH_labels))[[y]],
+#                                         text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
+#                                         showarrow = FALSE,# TRUE,
+#                                         arrowcolor='red',
+#                                         arrowhead = 6,
+#                                         arrowsize = 1,
+#                                         xref = "x",
+#                                         yref = "y",
+#                                         font = list(color = 'black',
+#                                                     family = 'arial',
+#                                                     size = 14)) %>%
+#                         config(scrollZoom = TRUE) %>%
+#                         layout(title = paste0("Bone and Soft Tissue (n=",nrow(p$data),")"),
+#                                height=1000, dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
+#                                margin = list(t = 50),
+#                                showlegend = T,
+#                                legend = list(orientation = "v",
+#                                              yanchor = "top",
+#                                              itemclick = "toggleothers",
+#                                              tracegroupgap = 2,
+#                                              itemwidth = 75,
+#                                              itemsizing = "constant")) %>%
+#                         toWebGL()
+# 
+#   })
+# 
+# #CNS/SARCOMA
+# output$plot_CNS_SARC <- renderPlotly({
+#                         # use the key aesthetic/argument to help uniquely identify selected observations
+#                         key <- rownames(anno_neuro_sarcoma)
+#                         #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
+#                         
+#                         
+#                         x <- paste0(input$x,"_x")
+#                         y <- paste0(input$x,"_y")
+#                         cnames <- aggregate(cbind(umap_x, umap_y) ~ Combined_class_match_dkfz, data=anno_neuro_sarcoma,
+#                                             FUN=function(x)mean((x)))
+#                         p <- ggplot(data=anno_neuro_sarcoma, aes(x=anno_neuro_sarcoma[[x]],y=anno_neuro_sarcoma[[y]],key=key)) +
+#                           geom_point(aes(color=Combined_class_match_dkfz),  size=2, alpha=1) +
+#                           geom_text(data=cnames, aes(x=umap_x, y=umap_y, label = Combined_class_match_dkfz), position = position_dodge(width=0.5),  size=2.5, inherit.aes = FALSE) +
+#                           theme_classic() +
+#                           theme(axis.text.y = element_text(size=9, color="black"),
+#                                 axis.text.x = element_text(size=9, color="black"),
+#                                 axis.ticks.y = element_line(color="black", size = 0.5),
+#                                 axis.ticks.x = element_line(color="black", size = 0.5),
+#                                 axis.ticks.length = unit(2,"mm"),
+#                                 panel.border = element_rect(colour = "black", fill=NA, size=1),
+#                                 panel.grid.major = element_line(colour="grey", size=0.5),
+#                                 axis.line = element_blank(),
+#                                 legend.text=element_text(size=10),
+#                                 legend.title=element_text(size=11),
+#                                 legend.key.size = unit(0.5, 'lines'),
+#                                 axis.title.x = element_text(size=14, color="black"),
+#                                 axis.title.y = element_text(size=14, color="black")) +
+#                           labs(x = paste0(input$x,"_1"), y = paste0(input$x,"_2")) +
+#                           #theme(legend.position="right") +
+#                           scale_color_manual("Methylation class", values = mycols, guide = guide_legend(override.aes = list(shape = 15))) +
+#                           scale_x_continuous(breaks = seq(-100, 100, by=5)) +
+#                           scale_y_continuous(breaks = seq(-100, 100, by=5)) +
+#                           coord_fixed(ratio = 1, xlim = ranges2$x, ylim = ranges2$y, expand = TRUE, clip = "on")
+#                         #guides(color = guide_legend(override.aes = list(shape = c(15))))
+#                         #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
+#                         ggplotly(p) %>%
+#                           add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
+#                                           y = subset(p$data, !is.na(NIH_labels))[[y]],
+#                                           text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
+#                                           showarrow = FALSE,# TRUE,
+#                                           arrowcolor='red',
+#                                           arrowhead = 6,
+#                                           arrowsize = 1,
+#                                           xref = "x",
+#                                           yref = "y",
+#                                           font = list(color = 'black',
+#                                                       family = 'arial',
+#                                                       size = 14)) %>%
+#                           config(scrollZoom = TRUE) %>%
+#                           layout(title = paste0("Combined CNS and Sarcoma (n=",nrow(p$data),")"),
+#                                  height=1000, dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
+#                                  margin = m,
+#                                  showlegend = T,
+#                                  legend = list(orientation = "v",
+#                                                yanchor = "top",
+#                                                itemclick = "toggleothers",
+#                                                tracegroupgap = 2,
+#                                                itemwidth = 75,
+#                                                itemsizing = "constant")) %>%
+#                           toWebGL()
+#                         
+#                       })
+# 
+# datInput_dimred <- eventReactive(input$render_dimenred, {
+#   # datInput only validated once the go button is clicked
+#   key <- rownames(anno_base)
+#   d <- event_data("plotly_selected")
+#   req(d)
+#   samples_supervised <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
+#   samples_supervised
+# })
 
   
 output$plot_dimenred <- renderPlotly({
