@@ -1,0 +1,7 @@
+default:
+  path_prefix: "D:/NIH_classifier/meffil_files/"
+rk:
+  path_prefix: "./"
+  
+rsconnect:
+  path_prefix: "/data/mdata/Shiny_NCI_demo/"

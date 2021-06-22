@@ -1,3 +1,4 @@
+library(config)
 library(shiny)
 library(shinyFiles)
 library(shinydashboard)
