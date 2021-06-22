@@ -14,6 +14,11 @@ library(data.table)
 library(highcharter)
 library(shinycustomloader)
 
+path_prefix=config::get("path_prefix")
+
+
+
+
 source("D:/NIH_classifier/R_files/Copy_number/plot_copy_number.R")
 source("D:/NIH_classifier/R_files/plot_supervised_SD.R")
 source("D:/NIH_classifier/R_files/Copy_number/Import_copy_number.R")
