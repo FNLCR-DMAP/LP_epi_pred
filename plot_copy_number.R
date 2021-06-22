@@ -1,5 +1,5 @@
-path_prefix="/data/mdata/Shiny_NCI_demo/"
-#path_prefix="./"
+library(config)
+path_prefix=config::get("path_prefix")
 
 CNA_plot <- function(x) {
 

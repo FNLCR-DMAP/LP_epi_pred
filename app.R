@@ -19,14 +19,14 @@ path_prefix=config::get("path_prefix")
 
 
 
-source("D:/NIH_classifier/R_files/Copy_number/plot_copy_number.R")
-source("D:/NIH_classifier/R_files/plot_supervised_SD.R")
-source("D:/NIH_classifier/R_files/Copy_number/Import_copy_number.R")
-source("D:/NIH_classifier/R_files/plot_dendrogram.R")
-source("D:/NIH_classifier/R_files/fviz_dend_modified.R")
-#source("D:/NIH_classifier/R_files/qc_plots.R")
+source("./plot_copy_number.R")
+source("./plot_supervised_SD.R")
+source("./Import_copy_number.R")
+source("./plot_dendrogram.R")
+source("./fviz_dend_modified.R")
+#source("./qc_plots.R")
 
-source("D:/NIH_classifier/R_files/Shiny/customTheme.R")
+source("./customTheme.R")
 
 jsCode <- "shinyjs.resetSel = function() { Plotly.restyle(plot, {selectedpoints: [null]});}"
 
@@ -1078,7 +1078,7 @@ server <- shinyServer(function(input, output, session) {
     d <- event_data("plotly_click")
     req(d)
     case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
-    dat <- fread("D:/NIH_classifier/meffil_files/sex_prediction.txt")
+    dat <- fread(paste0(path_prefix,"meffil_files/sex_prediction.txt"))
     ggplot(dat, aes(y=1, x=xy.diff)) +
       geom_jitter(aes(shape=predicted.sex, colour=sex.mismatch), size=1.5) +
       geom_point(data = dat[dat$sample.name==case,], color="green", size = 4) +
@@ -1098,7 +1098,7 @@ server <- shinyServer(function(input, output, session) {
     d <- event_data("plotly_click")
     req(d)
     case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
-    dat <-  fread("D:/NIH_classifier/meffil_files/meth_umeth.txt")
+    dat <-  fread(paste0(path_prefix,"meffil_files/meth_umeth.txt"))
     p1 <- ggplot(dat, aes(y=methylated, x=unmethylated)) +
       geom_point(colour="grey")
     p1 <- p1 + geom_point(data=subset(dat, outliers), color="red", size=2) +
@@ -1118,9 +1118,9 @@ server <- shinyServer(function(input, output, session) {
     d <- event_data("plotly_click")
     req(d)
     case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
-    files <- as.data.frame(list.files(path = "D:/NIH_classifier/mgmt_plots/", recursive = TRUE, full.names = TRUE))
+    files <- as.data.frame(list.files(path = paste0(path_prefix,"mgmt_plots/"), recursive = TRUE, full.names = TRUE))
     names(files) <- "filename"
-    files$file <- list.files(path = "D:/NIH_classifier/mgmt_plots/", recursive = TRUE, full.names = FALSE)
+    files$file <- list.files(path = paste0(path_prefix,"mgmt_plots/"), recursive = TRUE, full.names = FALSE)
     files$file <- gsub(".jpg", "", files$file)
     file <- files$filename[files$file %in% case]
     list(src = file, height = 400, width = 400)
@@ -1140,9 +1140,9 @@ server <- shinyServer(function(input, output, session) {
     d <- event_data("plotly_click")
     req(d)
     case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
-    files <- as.data.frame(list.files(path = "D:/NIH_classifier/mlh1_plots/", recursive = TRUE, full.names = TRUE))
+    files <- as.data.frame(list.files(path = paste0(path_prefix,"mlh1_plots/"), recursive = TRUE, full.names = TRUE))
     names(files) <- "filename"
-    files$file <- list.files(path = "D:/NIH_classifier/mlh1_plots/", recursive = TRUE, full.names = FALSE)
+    files$file <- list.files(path = paste0(path_prefix,"NIH_classifier/mlh1_plots/"), recursive = TRUE, full.names = FALSE)
     files$file <- gsub(".png", "", files$file)
     file <- files$filename[files$file %in% case]
     list(src = file, height = 400, width = 400)
