@@ -65,7 +65,7 @@ ui <- dashboardPage(
             tags$style(".navbar {min-height:100px !important}"),
             
     ),
-    title = span(img(src='./nci-logo3.png', height="74")), titleWidth = 500),
+    title = span(img(src='nci-logo3.png', height="74")), titleWidth = 500),
   ## Sidebar content
   dashboardSidebar(
     width = 300,
@@ -598,7 +598,7 @@ server <- shinyServer(function(input, output, session) {
                              itemclick = "toggleothers",
                              tracegroupgap = 2,
                              itemwidth = 75,
-                             itemsizing = "constant")) %>% 
+                             itemsizing = "constant"),scaleanchor = "x", scaleratio=1) %>% 
         toWebGL()
       
     }))
