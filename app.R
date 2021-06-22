@@ -59,7 +59,6 @@ anno_base$OS_status <- as.numeric(as.character(anno_base$OS_status))
 
 anno_base[, "PFS_months"] <- round(anno_base[, "PFS_months"], digits = 1)
 anno_base$PFS_status <- as.numeric(as.character(anno_base$PFS_status))
-scols<- c("order","Sample","Combined_class_match_dkfz","Combined_class_match_nci","NIH_labels","umap_x" , "umap_y","densmap_x","densmap_y")
 anno_neuro_sarcoma <- NULL
 anno_neuro <- NULL
 anno_sarcoma <-NULL
@@ -595,7 +594,7 @@ server <- shinyServer(function(input, output, session) {
   ###############################################################
   ###### Responding to events ###############################################
   observeEvent(input$organ_system, {
-   
+    scols<- c("order","Sample","Combined_class_match_dkfz","Combined_class_match_nci","NIH_labels","umap_x" , "umap_y","densmap_x","densmap_y")
     print(input$organ_system)
     if(input$organ_system=="CNS/Sarcoma"){
       if(is.null(anno_neuro_sarcoma)){
@@ -638,13 +637,18 @@ datInput_hc <- eventReactive(input$render_hc, {
 })
 
 output$plot_hc <- renderPlotly({
+  print("plot_hc perf")
+  ptm <- proc.time()
     plot_dat <- datInput_hc()
     plot_dendrogram(plot_dat)
+    print(proc.time() - ptm)
   })
 
 
   
   output$brush_CNS <- DT::renderDataTable(server = FALSE, {
+    print("brush CNS")
+    ptm <- proc.time()
     d <- event_data("plotly_selected")
     req(d)
     DT::datatable(anno_base[unlist(d$key), 
@@ -662,11 +666,13 @@ output$plot_hc <- renderPlotly({
                                  dom = 'Bfrtip',
                                  buttons = c('copy', 'csv', 'excel'))) %>%
       DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '120%')
-
+    print(proc.time() - ptm)
   })
   
   
   output$brush_supervised <- DT::renderDataTable(server = FALSE, {
+    print("brush supervised")
+    ptm <- proc.time()
     d <- event_data("plotly_selected", source = "B")
     req(d)
     DT::datatable(anno_base[unlist(d$key),
@@ -684,7 +690,7 @@ output$plot_hc <- renderPlotly({
                                  dom = 'Bfrtip',
                                  buttons = c('copy', 'csv', 'excel'))) %>%
       DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '100%')
-    
+    print(proc.time() - ptm)
   })
   
   output$brush_hc_cluster <- renderText( {
@@ -714,27 +720,33 @@ output$plot_hc <- renderPlotly({
 
     
     output$plot_CNA <- renderPlotly({
+      print("perf plot CNA")
+     
       key <- rownames(anno_base)
       d <- event_data("plotly_click")
       req(d)
       case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
-      CNA_plot(case)
-      add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-                      y = subset(p$data, !is.na(NIH_labels))[[y]],
-                      text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                      showarrow = TRUE,
-                      arrowcolor='red',
-                      arrowhead = 6,
-                      arrowsize = 1,
-                      xref = "x",
-                      yref = "y",
-                      font = list(color = 'black',
-                                  family = 'arial',
-                                  size = 14))
+      CNA_plot(case) 
+      # %>%
+      # add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
+      #                 y = subset(p$data, !is.na(NIH_labels))[[y]],
+      #                 text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
+      #                 showarrow = TRUE,
+      #                 arrowcolor='red',
+      #                 arrowhead = 6,
+      #                 arrowsize = 1,
+      #                 xref = "x",
+      #                 yref = "y",
+      #                 font = list(color = 'black',
+      #                             family = 'arial',
+      #                             size = 14))
+      # 
     })
 
     
     output$brush_CNA <- DT::renderDataTable({
+      print("brush CNA 23")
+    
       key <- rownames(anno_base)
       d <- event_data("plotly_click")
       req(d)
@@ -766,10 +778,12 @@ output$plot_hc <- renderPlotly({
                                    buttons = c('copy', 'csv', 'excel'))
                     ) %>%
         DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '120%', color = "black")
-
+     
     })
     
     output$brush_CNA_complete <- DT::renderDataTable({
+      print("brush CNA complete")
+  
       key <- rownames(anno_base)
       d <- event_data("plotly_click")
       req(d)
@@ -794,10 +808,12 @@ output$plot_hc <- renderPlotly({
                                    buttons = c('copy', 'csv', 'excel'))
       ) %>%
         DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '120%', color = "black")
-      
+      print(proc.time() - ptm)
     })
     
     output$brush_breakpoint <- DT::renderDataTable({
+      print("bruch breakpoint")
+    
       key <- rownames(anno_base)
       d <- event_data("plotly_click")
       req(d)
@@ -821,10 +837,12 @@ output$plot_hc <- renderPlotly({
                                    buttons = c('copy', 'csv', 'excel'))
       ) %>%
         DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '120%', color = "black")
-      
+     
     })
     
     output$brush_breakpoint_genes <- DT::renderDataTable({
+      print("break point genes")
+     
       key <- rownames(anno_base)
       d <- event_data("plotly_click")
       req(d)
@@ -848,10 +866,12 @@ output$plot_hc <- renderPlotly({
                                    buttons = c('copy', 'csv', 'excel'))
       ) %>%
         DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '120%', color = "black")
-      
+     
     })
     
     output$plot_qc_sex <- renderPlot({
+      print("qc sex perf")
+      
       key <- rownames(anno_base)
       d <- event_data("plotly_click")
       req(d)
@@ -868,7 +888,7 @@ output$plot_hc <- renderPlotly({
                      axis.title.x = element_text(size=14, color="black")) +
                geom_vline(xintercept=unique(c(dat$upper, dat$lower)), linetype="dashed", colour="purple")
       
-      
+     
     })
     
     output$plot_qc_methunmeth <- renderPlot({
@@ -889,7 +909,8 @@ output$plot_hc <- renderPlotly({
                geom_line(aes(y=methylated.lm), col="red") +
                geom_line(aes(y=upper.lm), col="red", linetype="dashed") +
                geom_line(aes(y=lower.lm), col="red", linetype="dashed")
-    })
+      print(proc.time() - ptm)
+       })
     
     output$plot_MGMT <- renderImage({
       key <- rownames(anno_base)
@@ -924,6 +945,8 @@ output$plot_hc <- renderPlotly({
       files$file <- gsub(".png", "", files$file)
       file <- files$filename[files$file %in% case]
       list(src = file, height = 400, width = 400)
+      
+      print(proc.time() - ptm)
     })
 
 

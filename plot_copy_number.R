@@ -15,8 +15,8 @@ library(tidyr)
 library(bigreadr)
 library(stringr)
 library(plotly)
-  
-lines <- read.delim(paste0(path_prefix,"/plot_vertical_lines.txt"))
+print("starting CNA")
+lines <- read.delim(paste0(path_prefix,"plot_vertical_lines.txt"))
 print(paste0(path_prefix,"Segments"))
 print(x)
 file <- list.files(path = paste0(path_prefix,"Segments"), pattern = x, recursive = TRUE, full.names = TRUE)
@@ -131,18 +131,18 @@ p <- ggplot(data, aes(x=NewPos1,y=bins$log2ratio)) +
   labs(x = "Chromosome", y = "log2ratio") +
   theme(legend.position="none")
 ggplotly(p) %>% 
-   add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-                   y = subset(p$data, !is.na(NIH_labels))[[y]],
-                   text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-                   showarrow = TRUE,
-                   arrowcolor='red',
-                   arrowhead = 6,
-                   arrowsize = 1,
-                   xref = "x",
-                   yref = "y",
-                   font = list(color = 'black',
-                              family = 'arial',
-                               size = 14)) %>%
+   # add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
+   #                 y = subset(p$data, !is.na(NIH_labels))[[y]],
+   #                 text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
+   #                 showarrow = TRUE,
+   #                 arrowcolor='red',
+   #                 arrowhead = 6,
+   #                 arrowsize = 1,
+   #                 xref = "x",
+   #                 yref = "y",
+   #                 font = list(color = 'black',
+   #                            family = 'arial',
+   #                             size = 14)) %>%
   config(scrollZoom = TRUE) %>%
   layout(dragmode = "pan") %>% 
   toWebGL()
