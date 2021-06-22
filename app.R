@@ -53,7 +53,7 @@ anno_neuro_sarcoma <- NULL
 anno_neuro <- NULL
 anno_sarcoma <-NULL
 anno_hemepath <- NULL
-
+anno_renal <- NULL
 #ui------------------------
 ui <- dashboardPage(
   dashboardHeader(
@@ -65,7 +65,7 @@ ui <- dashboardPage(
             tags$style(".navbar {min-height:100px !important}"),
             
     ),
-    title = span(img(src='nci-logo3.png', height="74")), titleWidth = 500),
+    title = span(img(src='./nci-logo3.png', height="74")), titleWidth = 500),
   ## Sidebar content
   dashboardSidebar(
     width = 300,
@@ -1003,7 +1003,7 @@ server <- shinyServer(function(input, output, session) {
     d <- event_data("plotly_click")
     req(d)
     case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
-    dat <- fread(paste0(path_prefix,"meffil_files/sex_prediction.txt"))
+    dat <- fread(paste0(path_prefix,"sex_prediction.txt"))
     ggplot(dat, aes(y=1, x=xy.diff)) +
       geom_jitter(aes(shape=predicted.sex, colour=sex.mismatch), size=1.5) +
       geom_point(data = dat[dat$sample.name==case,], color="green", size = 4) +
@@ -1023,7 +1023,7 @@ server <- shinyServer(function(input, output, session) {
     d <- event_data("plotly_click")
     req(d)
     case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
-    dat <-  fread(paste0(path_prefix,"meffil_files/meth_umeth.txt"))
+    dat <-  fread(paste0(path_prefix,"meth_umeth.txt"))
     p1 <- ggplot(dat, aes(y=methylated, x=unmethylated)) +
       geom_point(colour="grey")
     p1 <- p1 + geom_point(data=subset(dat, outliers), color="red", size=2) +
