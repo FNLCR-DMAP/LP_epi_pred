@@ -637,18 +637,17 @@ datInput_hc <- eventReactive(input$render_hc, {
 })
 
 output$plot_hc <- renderPlotly({
-  print("plot_hc perf")
-  ptm <- proc.time()
+
     plot_dat <- datInput_hc()
     plot_dendrogram(plot_dat)
-    print(proc.time() - ptm)
+
   })
 
 
   
   output$brush_CNS <- DT::renderDataTable(server = FALSE, {
     print("brush CNS")
-    ptm <- proc.time()
+ 
     d <- event_data("plotly_selected")
     req(d)
     DT::datatable(anno_base[unlist(d$key), 
@@ -666,13 +665,13 @@ output$plot_hc <- renderPlotly({
                                  dom = 'Bfrtip',
                                  buttons = c('copy', 'csv', 'excel'))) %>%
       DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '120%')
-    print(proc.time() - ptm)
+  
   })
   
   
   output$brush_supervised <- DT::renderDataTable(server = FALSE, {
     print("brush supervised")
-    ptm <- proc.time()
+  
     d <- event_data("plotly_selected", source = "B")
     req(d)
     DT::datatable(anno_base[unlist(d$key),
@@ -690,7 +689,7 @@ output$plot_hc <- renderPlotly({
                                  dom = 'Bfrtip',
                                  buttons = c('copy', 'csv', 'excel'))) %>%
       DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '100%')
-    print(proc.time() - ptm)
+   
   })
   
   output$brush_hc_cluster <- renderText( {
@@ -808,7 +807,7 @@ output$plot_hc <- renderPlotly({
                                    buttons = c('copy', 'csv', 'excel'))
       ) %>%
         DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '120%', color = "black")
-      print(proc.time() - ptm)
+     
     })
     
     output$brush_breakpoint <- DT::renderDataTable({
@@ -909,10 +908,11 @@ output$plot_hc <- renderPlotly({
                geom_line(aes(y=methylated.lm), col="red") +
                geom_line(aes(y=upper.lm), col="red", linetype="dashed") +
                geom_line(aes(y=lower.lm), col="red", linetype="dashed")
-      print(proc.time() - ptm)
+     
        })
     
     output$plot_MGMT <- renderImage({
+      print("plot_MGMT")
       key <- rownames(anno_base)
       d <- event_data("plotly_click")
       req(d)
@@ -922,16 +922,20 @@ output$plot_hc <- renderPlotly({
       files$file <- list.files(path = paste0(path_prefix,"/mgmt_plots/"), recursive = TRUE, full.names = FALSE)
       files$file <- gsub(".jpg", "", files$file)
       file <- files$filename[files$file %in% case]
+      print("plot_MGMT done")
       list(src = file, height = 400, width = 400)
+      
     })
     
     output$MGMT_result <- renderText({
+      print("MGMT_result")
       key <- rownames(anno_base)
       d <- event_data("plotly_click")
       req(d)
       case <- anno_base[rownames(anno_base) %in% d$key,]
       case.res <- ifelse(grepl("M", case$MGMT),
                        "methylated", "unmethylated")
+      print("MGMT_result done")
       paste("Result: ", case.res)})
     
     output$plot_MLH1 <- renderImage({
@@ -945,8 +949,6 @@ output$plot_hc <- renderPlotly({
       files$file <- gsub(".png", "", files$file)
       file <- files$filename[files$file %in% case]
       list(src = file, height = 400, width = 400)
-      
-      print(proc.time() - ptm)
     })
 
 
