@@ -49,6 +49,8 @@ anno_base$OS_status <- as.numeric(as.character(anno_base$OS_status))
 
 anno_base[, "PFS_months"] <- round(anno_base[, "PFS_months"], digits = 1)
 anno_base$PFS_status <- as.numeric(as.character(anno_base$PFS_status))
+
+rownames(anno_base)=anno_base$order
 anno_neuro_sarcoma <- NULL
 anno_neuro <- NULL
 anno_sarcoma <-NULL
@@ -612,21 +614,25 @@ server <- shinyServer(function(input, output, session) {
     if(input$organ_system=="CNS/Sarcoma"){
       if(is.null(anno_neuro_sarcoma)){
         anno_neuro_sarcoma <<- fread(paste0(path_prefix,"anno_neuro_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
+        rownames(anno_neuro_sarcoma)=anno_neuro_sarcoma$order
         output$plot_CNS_SARC <- myRender(anno_neuro_sarcoma,input$organ_system)
       }
     }else if(input$organ_system=="Central Nervous System"){
       if(is.null(anno_neuro)){
-        anno_neuro <- fread(paste0(path_prefix,"anno_neuro.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
+        anno_neuro <<- fread(paste0(path_prefix,"anno_neuro.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
+        rownames(anno_neuro)=anno_neuro$order
         output$plot_CNS <<- myRender(anno_neuro,input$organ_system)
       }
     }else if(input$organ_system=="Bone and Soft Tissue"){
       if(is.null(anno_sarcoma)){
         anno_sarcoma <- fread(paste0(path_prefix,"anno_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
+        rownames(anno_sarcoma)=anno_sarcoma$order
         output$plot_SARC <<-  myRender(anno_sarcoma,input$organ_system)
       }
     }else if(input$organ_system=="Hematopoietic"){
       if(is.null(anno_hemepath)){
         anno_hemepath <- fread(paste0(path_prefix,"anno_hemepath.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
+        rownames(anno_hemepath)=anno_hemepath$order
         output$plot_HEME <<- myRender(anno_hemepath,input$organ_system)
       }
     }
@@ -666,131 +672,6 @@ server <- shinyServer(function(input, output, session) {
   
   
   
-  #HEME
-  output$plot_HEME <- renderPlotly({
-    # use the key aesthetic/argument to help uniquely identify selected observations
-    key <- rownames(anno_hemepath)
-    #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
-    x <- paste0(input$x,"_x")
-    y <- paste0(input$x,"_y")
-    #cnames <- aggregate(cbind(umap_x, umap_y) ~ Combined_class_match_dkfz, data=anno_hemepath,
-    #                    FUN=function(x)mean((x)))
-    p <- ggplot(data=anno_hemepath, aes(x=anno_hemepath[[x]],y=anno_hemepath[[y]],key=key)) +
-      geom_point(aes(color=NCI_METRIC),  size=2, alpha=1) +
-      #geom_text(data=cnames, aes(x=umap_x, y=umap_y, label = Combined_class_match_dkfz), position = position_dodge(width=0.5),  size=2.5, inherit.aes = FALSE) +
-      theme_classic() +
-      theme(axis.text.y = element_text(size=9, color="black"),
-            axis.text.x = element_text(size=9, color="black"),
-            axis.ticks.y = element_line(color="black", size = 0.5),
-            axis.ticks.x = element_line(color="black", size = 0.5),
-            axis.ticks.length = unit(2,"mm"),
-            panel.border = element_rect(colour = "black", fill=NA, size=1),
-            panel.grid.major = element_line(colour="grey", size=0.5),
-            axis.line = element_blank(),
-            legend.text=element_text(size=10),
-            legend.title=element_text(size=11),
-            legend.key.size = unit(0.5, 'lines'),
-            axis.title.x = element_text(size=14, color="black"),
-            axis.title.y = element_text(size=14, color="black")) +
-      labs(x = paste0(input$x,"_1"), y = paste0(input$x,"_2")) +
-      #theme(legend.position="right") +
-      scale_color_manual("Methylation class", values = mycols, guide = guide_legend(override.aes = list(shape = 15))) +
-      scale_x_continuous(breaks = seq(-100, 100, by=5)) +
-      scale_y_continuous(breaks = seq(-100, 100, by=5)) +
-      coord_fixed(ratio = 1, xlim = ranges2$x, ylim = ranges2$y, expand = TRUE, clip = "on")
-    #guides(color = guide_legend(override.aes = list(shape = c(15))))
-    #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
-    ggplotly(p) %>%
-      # add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-      #                 y = subset(p$data, !is.na(NIH_labels))[[y]],
-      #                 text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-      #                 showarrow = TRUE,
-      #                 arrowcolor='red',
-      #                 arrowhead = 6,
-      #                 arrowsize = 1,
-      #                 xref = "x",
-      #                 yref = "y",
-      #                 font = list(color = 'black',
-      #                             family = 'arial',
-    #                             size = 14)) %>%
-    config(scrollZoom = TRUE) %>%
-      layout(title = paste0("Hematopoietic (n=",nrow(p$data),")"),
-             #height=1000, 
-             dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
-             margin = m,
-             showlegend = T,
-             legend = list(orientation = "v",
-                           yanchor = "top",
-                           itemclick = "toggleothers",
-                           tracegroupgap = 2,
-                           itemwidth = 75,
-                           itemsizing = "constant")) %>%
-      toWebGL()
-    
-  })
-  
-  #RENAL
-  output$plot_RENAL <- renderPlotly({
-    # use the key aesthetic/argument to help uniquely identify selected observations
-    key <- rownames(anno_renal)
-    #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
-    x <- paste0(input$x,"_x")
-    y <- paste0(input$x,"_y")
-    #cnames <- aggregate(cbind(umap_x, umap_y) ~ Combined_class_match_dkfz, data=anno_renal,
-    #                    FUN=function(x)mean((x)))
-    p <- ggplot(data=anno_renal, aes(x=anno_renal[[x]],y=anno_renal[[y]],key=key)) +
-      geom_point(aes(color=NCI_METRIC),  size=2, alpha=1) +
-      #geom_text(data=cnames, aes(x=umap_x, y=umap_y, label = Combined_class_match_dkfz), position = position_dodge(width=0.5),  size=2.5, inherit.aes = FALSE) +
-      theme_classic() +
-      theme(axis.text.y = element_text(size=9, color="black"),
-            axis.text.x = element_text(size=9, color="black"),
-            axis.ticks.y = element_line(color="black", size = 0.5),
-            axis.ticks.x = element_line(color="black", size = 0.5),
-            axis.ticks.length = unit(2,"mm"),
-            panel.border = element_rect(colour = "black", fill=NA, size=1),
-            panel.grid.major = element_line(colour="grey", size=0.5),
-            axis.line = element_blank(),
-            legend.text=element_text(size=10),
-            legend.title=element_text(size=11),
-            legend.key.size = unit(0.5, 'lines'),
-            axis.title.x = element_text(size=14, color="black"),
-            axis.title.y = element_text(size=14, color="black")) +
-      labs(x = paste0(input$x,"_1"), y = paste0(input$x,"_2")) +
-      #theme(legend.position="right") +
-      scale_color_manual("Methylation class", values = mycols, guide = guide_legend(override.aes = list(shape = 15))) +
-      scale_x_continuous(breaks = seq(-100, 100, by=5)) +
-      scale_y_continuous(breaks = seq(-100, 100, by=5)) +
-      coord_fixed(ratio = 1, xlim = ranges2$x, ylim = ranges2$y, expand = TRUE, clip = "on")
-    #guides(color = guide_legend(override.aes = list(shape = c(15))))
-    #coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
-    ggplotly(p) %>%
-      # add_annotations(x = subset(p$data, !is.na(NIH_labels))[[x]],
-      #                 y = subset(p$data, !is.na(NIH_labels))[[y]],
-      #                 text = subset(p$data, !is.na(NIH_labels))$NIH_labels,
-      #                 showarrow = TRUE,
-      #                 arrowcolor='red',
-      #                 arrowhead = 6,
-      #                 arrowsize = 1,
-      #                 xref = "x",
-      #                 yref = "y",
-      #                 font = list(color = 'black',
-      #                             family = 'arial',
-    #                             size = 14)) %>%
-    config(scrollZoom = TRUE) %>%
-      layout(title = paste0("Renal (n=",nrow(p$data),")"),
-             #height=800, 
-             dragmode = "pan", xaxis = list(autorange = TRUE), yaxis = list(autorange = TRUE),
-             margin = m,
-             showlegend = T,
-             legend = list(orientation = "v",
-                           yanchor = "top",
-                           itemclick = "toggleothers",
-                           tracegroupgap = 2,
-                           itemwidth = 75,
-                           itemsizing = "constant")) %>%
-      toWebGL()
-    
-  })
   
   output$brush_table <- DT::renderDataTable(server = FALSE, {
     d <- event_data("plotly_selected")
