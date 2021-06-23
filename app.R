@@ -49,8 +49,9 @@ anno_base$OS_status <- as.numeric(as.character(anno_base$OS_status))
 
 anno_base[, "PFS_months"] <- round(anno_base[, "PFS_months"], digits = 1)
 anno_base$PFS_status <- as.numeric(as.character(anno_base$PFS_status))
+anno_base<-anno_base[!is.na(anno_base$idat_filename),]
 
-rownames(anno_base)=anno_base$order
+rownames(anno_base)=anno_base$idat_filename
 anno_neuro_sarcoma <- NULL
 anno_neuro <- NULL
 anno_sarcoma <-NULL
@@ -600,39 +601,45 @@ server <- shinyServer(function(input, output, session) {
                              itemclick = "toggleothers",
                              tracegroupgap = 2,
                              itemwidth = 75,
-                             itemsizing = "constant"),scaleanchor = "x", scaleratio=1) %>% 
-        toWebGL()
+                             itemsizing = "constant"),scaleanchor = "x", scaleratio=1) 
+    #  %>%   toWebGL()
       
     }))
     
   }
   ###############################################################
   ###### Responding to events ###############################################
+  process_files<-function(filename){
+    scols<- c("order","Sample","idat_filename","Combined_class_match_dkfz","Combined_class_match_nci","NIH_labels","umap_x" , "umap_y","densmap_x","densmap_y")
+    
+    anno_generic <- fread(paste0(path_prefix,filename), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
+    anno_generic<-anno_generic[!is.na(anno_generic$idat_filename),]
+    rownames(anno_generic)<-anno_generic$idat_filename
+    return (anno_generic)
+  }
+  
   observeEvent(input$organ_system, {
-    scols<- c("order","Sample","Combined_class_match_dkfz","Combined_class_match_nci","NIH_labels","umap_x" , "umap_y","densmap_x","densmap_y")
     print(input$organ_system)
     if(input$organ_system=="CNS/Sarcoma"){
       if(is.null(anno_neuro_sarcoma)){
-        anno_neuro_sarcoma <<- fread(paste0(path_prefix,"anno_neuro_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
-        rownames(anno_neuro_sarcoma)=anno_neuro_sarcoma$order
+        
+        anno_neuro_sarcoma<<-process_files("anno_neuro_sarcoma.txt")
+        
         output$plot_CNS_SARC <- myRender(anno_neuro_sarcoma,input$organ_system)
       }
     }else if(input$organ_system=="Central Nervous System"){
       if(is.null(anno_neuro)){
-        anno_neuro <<- fread(paste0(path_prefix,"anno_neuro.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
-        rownames(anno_neuro)=anno_neuro$order
+        anno_neuro<<-process_files("anno_neuro.txt")
         output$plot_CNS <<- myRender(anno_neuro,input$organ_system)
       }
     }else if(input$organ_system=="Bone and Soft Tissue"){
       if(is.null(anno_sarcoma)){
-        anno_sarcoma <- fread(paste0(path_prefix,"anno_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
-        rownames(anno_sarcoma)=anno_sarcoma$order
+        anno_sarcoma <- process_files("anno_sarcoma.txt")
         output$plot_SARC <<-  myRender(anno_sarcoma,input$organ_system)
       }
     }else if(input$organ_system=="Hematopoietic"){
       if(is.null(anno_hemepath)){
-        anno_hemepath <- fread(paste0(path_prefix,"anno_hemepath.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
-        rownames(anno_hemepath)=anno_hemepath$order
+        anno_hemepath <- process_files("anno_hemepath.txt")
         output$plot_HEME <<- myRender(anno_hemepath,input$organ_system)
       }
     }
@@ -673,7 +680,8 @@ server <- shinyServer(function(input, output, session) {
   
   
   
-  output$brush_table <- DT::renderDataTable(server = FALSE, {
+  output$brush_table <- DT::renderDataTable(server = FALSE,rownames=FALSE, {
+    print("brush_table")
     d <- event_data("plotly_selected")
     req(d)
     DT::datatable(anno_base[unlist(d$key), 
@@ -689,12 +697,14 @@ server <- shinyServer(function(input, output, session) {
                                  autoWidth = TRUE,
                                  ordering = TRUE,
                                  dom = 'Bfrtip',
-                                 buttons = c('copy', 'csv', 'excel'))) %>%
+                                 buttons = c('copy', 'csv', 'excel')),
+                  rownames= FALSE) %>%
       DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '120%')
   })
   
   
-  output$brush_supervised <- DT::renderDataTable(server = FALSE, {
+  output$brush_supervised <- DT::renderDataTable(server = FALSE,{
+    print("brush_supervised")
     d <- event_data("plotly_selected", source = "B")
     req(d)
     DT::datatable(anno_base[unlist(d$key),
@@ -703,6 +713,7 @@ server <- shinyServer(function(input, output, session) {
                               "idat_filename")],
                   extensions = 'Buttons',
                   class = "display",
+                  
                   options = list(lengthMenu = c(5, 30, 50), pageLength = 10, scrollY = '500px',
                                  paging = TRUE,
                                  searching = TRUE,
@@ -711,7 +722,7 @@ server <- shinyServer(function(input, output, session) {
                                  ordering = TRUE,
                                  dom = 'Bfrtip',
                                  buttons = c('copy', 'csv', 'excel'))) %>%
-      DT::formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7, 8), fontSize = '100%')
+      DT::formatStyle(columns = c( 1,2, 3, 4, 5, 6, 7, 8), fontSize = '100%')
     
   })
   
@@ -763,6 +774,7 @@ server <- shinyServer(function(input, output, session) {
   
   
   output$brush_CNA <- DT::renderDataTable({
+    print("brush_CNA")
     key <- rownames(anno_base)
     d <- event_data("plotly_click")
     req(d)
