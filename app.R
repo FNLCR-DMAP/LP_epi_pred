@@ -37,6 +37,8 @@ print("read anno_base")
 ptm <- proc.time()
 
 #anno_base <- openxlsx::read.xlsx(paste0(path_prefix,"./Sample_sheet_master.xlsm"))
+scols<- c("order","Sample","Combined_class_match_dkfz","Combined_class_match_nci","NIH_labels","umap_x" , "umap_y","densmap_x","densmap_y")
+
 anno_base <-as.data.frame(read_xlsx(paste0(path_prefix,"./Sample_sheet_master.xlsm"), guess_max = 80000))
 
 
@@ -56,6 +58,14 @@ anno_neuro <- NULL
 anno_sarcoma <-NULL
 anno_hemepath <- NULL
 anno_renal <- NULL
+read_anno<-function(filename){
+  print(filename)
+  anno_in <- fread(paste0(path_prefix,filename), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
+  rownames(anno_in)=anno_in$order
+  print(head(anno_in))
+  return(anno_in)
+}
+
 #ui------------------------
 ui <- dashboardPage(
   dashboardHeader(
@@ -542,8 +552,11 @@ server <- shinyServer(function(input, output, session) {
     b = 100,
     t = 50)
   
+
+  ###############################################################
+  ###### Responding to events ###############################################
   myRender<-function(anno_generic,anno_title){
-    return (renderPlotly({
+    
       # use the key aesthetic/argument to help uniquely identify selected observations
       key <- rownames(anno_generic)
       #sample_filter <- filter_select("filter", "Find sample", tx, ~Sample)
@@ -597,47 +610,50 @@ server <- shinyServer(function(input, output, session) {
                showlegend = T,
                legend = list(orientation = "v",
                              yanchor = "center",
-                             itemclick = "toggleothers",
+                             itemclick = "toggle",
                              tracegroupgap = 2,
                              itemwidth = 75,
                              itemsizing = "constant"),scaleanchor = "x", scaleratio=1) %>% 
-        toWebGL()
+        toWebGL() ->fig
       
-    }))
-    
-  }
-  ###############################################################
-  ###### Responding to events ###############################################
-  observeEvent(input$organ_system, {
-    scols<- c("order","Sample","Combined_class_match_dkfz","Combined_class_match_nci","NIH_labels","umap_x" , "umap_y","densmap_x","densmap_y")
-    print(input$organ_system)
-    if(input$organ_system=="CNS/Sarcoma"){
-      if(is.null(anno_neuro_sarcoma)){
-        anno_neuro_sarcoma <<- fread(paste0(path_prefix,"anno_neuro_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
-        rownames(anno_neuro_sarcoma)=anno_neuro_sarcoma$order
-        output$plot_CNS_SARC <- myRender(anno_neuro_sarcoma,input$organ_system)
-      }
-    }else if(input$organ_system=="Central Nervous System"){
-      if(is.null(anno_neuro)){
-        anno_neuro <<- fread(paste0(path_prefix,"anno_neuro.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
-        rownames(anno_neuro)=anno_neuro$order
-        output$plot_CNS <<- myRender(anno_neuro,input$organ_system)
-      }
-    }else if(input$organ_system=="Bone and Soft Tissue"){
-      if(is.null(anno_sarcoma)){
-        anno_sarcoma <- fread(paste0(path_prefix,"anno_sarcoma.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
-        rownames(anno_sarcoma)=anno_sarcoma$order
-        output$plot_SARC <<-  myRender(anno_sarcoma,input$organ_system)
-      }
-    }else if(input$organ_system=="Hematopoietic"){
-      if(is.null(anno_hemepath)){
-        anno_hemepath <- fread(paste0(path_prefix,"anno_hemepath.txt"), stringsAsFactors = FALSE, check.names = FALSE,select = scols)
-        rownames(anno_hemepath)=anno_hemepath$order
-        output$plot_HEME <<- myRender(anno_hemepath,input$organ_system)
-      }
+       return(fig)
+      
     }
-    print("done render")
+    
+  
+  
+###############3
+#shiny renders
+  
+
+ 
+  
+  output$plot_CNS <- renderPlotly({
+    if(is.null(anno_neuro)){
+      anno_neuro<<-read_anno("anno_neuro.txt")
+    }
+    myRender(anno_neuro,input$organ_system)
   })
+  output$plot_CNS_SARC <- renderPlotly({
+    if(is.null(anno_neuro_sarcoma)){
+      anno_neuro_sarcoma<<-read_anno("anno_neuro_sarcoma.txt")
+    }
+    myRender(anno_neuro_sarcoma,input$organ_system)
+    })
+  output$plot_SARC <- renderPlotly({
+    if(is.null(anno_sarcoma)){
+      anno_sarcoma<<-read_anno("anno_sarcoma.txt")
+    }
+    myRender(anno_sarcoma,input$organ_system)
+    })
+  output$plot_HEME <- renderPlotly({
+    if(is.null(anno_hemepath)){
+      anno_hemepath<<-read_anno("anno_hemepath.txt")
+    }
+    myRender(anno_hemepath,input$organ_system)
+    })
+
+
   
   ###############################################################
   datInput_dimred <- eventReactive(input$render_dimenred, {
@@ -948,7 +964,7 @@ server <- shinyServer(function(input, output, session) {
     case <- anno_base$idat_filename[rownames(anno_base) %in% d$key]
     files <- as.data.frame(list.files(path = paste0(path_prefix,"mlh1_plots/"), recursive = TRUE, full.names = TRUE))
     names(files) <- "filename"
-    files$file <- list.files(path = paste0(path_prefix,"NIH_classifier/mlh1_plots/"), recursive = TRUE, full.names = FALSE)
+    files$file <- list.files(path = paste0(path_prefix,"mlh1_plots/"), recursive = TRUE, full.names = FALSE)
     files$file <- gsub(".png", "", files$file)
     file <- files$filename[files$file %in% case]
     list(src = file, height = 400, width = 400)
